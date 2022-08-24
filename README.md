@@ -1,19 +1,18 @@
 Ansible Role: ansible_role_vsphere_snapshot
 =========
 
-An Ansible role that handles create/revert/removal of snapshots in VMware vSphere.
+Handles create/revert/removal of snapshots in VMware vSphere.
 
 
 Requirements
 ------------
 
-This role is dependent on the VMware community modules
-Install with ansible-galaxy collection install community.vmware
+This role is dependent on `community.vmware` collection.
 
 Role Variables
 --------------
 
-Available variables are listed below, along with default values where applicable (see defaults/main.yml):
+Available variables are listed below, along with default values where applicable (see `defaults/main.yml`):
 
     ansible_role_vsphere_snapshot_action:
 
