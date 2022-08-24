@@ -15,6 +15,10 @@ Role Variables
 
 Available variables are listed below, along with default values where applicable (see defaults/main.yml):
 
+    ansible_role_vsphere_snapshot_action:
+
+Snapshot operation, valid values are: create, delete, revert
+
     ansible_role_vsphere_snapshot_datacenter: ''
 
 vSphere Datacenter where the snapshot operations will take place.
@@ -93,7 +97,7 @@ Example Playbook
         ansible_role_vsphere_snapshot_vcenter_password: 'secretpassword'
         ansible_role_vsphere_snapshot_vcenter_username: 'secretusername'
         ansible_role_vsphere_snapshot_vcenter: 'testvcenter.testdomain.com'
-
+        ansible_role_vsphere_snapshot_action: create
 
       roles:
          - role: ansible_role_vsphere_snapshot
