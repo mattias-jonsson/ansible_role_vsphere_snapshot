@@ -5,6 +5,7 @@
     that: 
       - ansible_role_vsphere_snapshot_instance_uuid | length > 0
     fail_msg: "instance.Uuid seems to be empty, I'm not a psychic."
+  when: ansible_role_vsphere_snapshot_action is defined
 
 - name: block for create snapshot
   block:
@@ -49,7 +50,7 @@
       set_fact:
         ansible_role_vsphere_snapshot_created: "{{ 'true' if ansible_role_vsphere_snapshot_create.changed | bool else 'false' }}"
 
-  when: ansible_role_vsphere_snapshot_action | lower == "create"
+  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "create")
 
 
 - name: block for remove snapshot
@@ -76,7 +77,7 @@
       set_fact:
         ansible_role_vsphere_snapshot_removed: "{{ 'true' if ansible_role_vsphere_snapshot_remove.changed | bool else 'false' }}"
 
-  when: ansible_role_vsphere_snapshot_action | lower == "remove"
+  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "remove")
 
 
 - name: block for revert snapshot
@@ -130,4 +131,4 @@
       set_fact:
         ansible_role_vsphere_snapshot_removed_after_revert: "{{ 'true' if ansible_role_vsphere_snapshot_remove.changed | bool else 'false' }}"
 
-  when: ansible_role_vsphere_snapshot_action | lower == "revert"
+  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "revert")
