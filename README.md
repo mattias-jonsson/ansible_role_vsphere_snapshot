@@ -58,7 +58,7 @@ Example Playbook
         ansible_role_vsphere_snapshot_vcenter_password: 'secretpassword'
         ansible_role_vsphere_snapshot_vcenter_username: 'secretusername'
         ansible_role_vsphere_snapshot_vcenter: 'testvcenter.testdomain.com'
- 
+
       tasks:
         - name: Patching servers block.
           block:
@@ -84,8 +84,6 @@ Example Playbook
                 name: ansible_role_vsphere_snapshot
               vars:
                 ansible_role_vsphere_snapshot_action: revert
-
-
 
 
 License
