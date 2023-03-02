@@ -14,68 +14,30 @@ Role Variables
 
 Available variables are listed below, along with default values where applicable (see `defaults/main.yml`):
 
-    ansible_role_vsphere_snapshot_action:
 
-Snapshot operation, valid values are: create, delete, revert
 
-    ansible_role_vsphere_snapshot_datacenter: ''
-
-vSphere Datacenter where the snapshot operations will take place.
-
-    ansible_role_vsphere_snapshot_description: ''
-
-Description to add to the snapshot.
-
-    ansible_role_vsphere_snapshot_instance_uuid: ''
-
-Instance UUID of virtual machine.
-
-    ansible_role_vsphere_snapshot_name_prefix: ''
-
-Prefix to add to the snapshot name.
-
-    ansible_role_vsphere_snapshot_name_suffix: ''
-
-Suffix to add to the snapshot name.
-
-    ansible_role_vsphere_snapshot_port: ''
-
-Port of the vCenter where snapshot operations will take place.
-
-    ansible_role_vsphere_snapshot_quiesce_guest_file_system: 'false'
-
-If set to true, the file system in the virtual machine will be quiesced if the virtual machine is powered on.
-
-    ansible_role_vsphere_snapshot_remove_after_revert: 'true'
-
-(Boolean) Remove snapshot after successful revert operation
-
-    ansible_role_vsphere_snapshot_snapshot_memory: 'true'
-
-If set to true, a memory dump of the virtual machine is included in the snapshot.
-
-    ansible_role_vsphere_snapshot_validate_certs: ''
-
-(Boolean) Validate SSL certificates when connecting to vCenter.
-
-    ansible_role_vsphere_snapshot_vcenter_password: ''
-
-Password used to connect to vCenter.
-
-    ansible_role_vsphere_snapshot_vcenter_username: ''
-
-Username used to connect to vCenter.
-
-    ansible_role_vsphere_snapshot_vcenter: ''
-
-Name of the vCenter where snapshot operations will take place.
-    
+| Variable | Required | Default | Comments |
+| -------- | -------- | ------- | -------- |
+| `ansible_role_vsphere_snapshot_action` | Yes | | Snapshot operation, valid values are: `create`, `delete` or `revert`. |
+| `ansible_role_vsphere_snapshot_datacenter` | Yes | | vSphere Datacenter where the snapshot operations will take place. |
+| `ansible_role_vsphere_snapshot_description` | Yes | | Description to add to the snapshot. |
+| `ansible_role_vsphere_snapshot_instance_uuid` | Yes | | Instance UUID of virtual machine. |
+| `ansible_role_vsphere_snapshot_name_prefix` | No | | Prefix to add to the snapshot name. |
+| `ansible_role_vsphere_snapshot_name_suffix` | No | | Suffix to add to the snapshot name. |
+| `ansible_role_vsphere_snapshot_port` | Yes | | Port of the vCenter where snapshot operations will take place, common value would be 443 for HTTPS. |
+| `ansible_role_vsphere_snapshot_quiesce_guest_file_system` | No | false | If set to true, the file system in the virtual machine will be quiesced if the virtual machine is powered on. |
+| `ansible_role_vsphere_snapshot_remove_after_revert` | No | true | (Boolean) Remove snapshot after successful revert operation |
+| `ansible_role_vsphere_snapshot_snapshot_memory` | No | true | If set to true, a memory dump of the virtual machine is included in the snapshot. |
+| `ansible_role_vsphere_snapshot_validate_certs` | Yes | | (Boolean) Validate SSL certificates when connecting to vCenter. |
+| `ansible_role_vsphere_snapshot_vcenter_password` | Yes | | Password used to connect to vCenter. |
+| `ansible_role_vsphere_snapshot_vcenter_username` | Yes | | Username used to connect to vCenter. |
+| `ansible_role_vsphere_snapshot_vcenter` | Yes | | Name of the vCenter where snapshot operations will take place. |
 
 
 Dependencies
 ------------
 
-This role has a dependencie on the role ansible_role_vsphere_snapshot if vSphere snapshot functionality will be utilized.
+This role has no external dependencies.
 
 Example Playbook
 ----------------
