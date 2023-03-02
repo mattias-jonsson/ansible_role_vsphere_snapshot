@@ -52,16 +52,41 @@ Example Playbook
         ansible_role_vsphere_snapshot_name_suffix: '01234'
         ansible_role_vsphere_snapshot_port: '443'
         ansible_role_vsphere_snapshot_quiesce_guest_file_system: 'true'
-        ansible_role_vsphere_snapshot_remove_after_revert: 'false'
+        ansible_role_vsphere_snapshot_remove_after_revert: 'true'
         ansible_role_vsphere_snapshot_snapshot_memory: 'true'
         ansible_role_vsphere_snapshot_validate_certs: 'false'
         ansible_role_vsphere_snapshot_vcenter_password: 'secretpassword'
         ansible_role_vsphere_snapshot_vcenter_username: 'secretusername'
         ansible_role_vsphere_snapshot_vcenter: 'testvcenter.testdomain.com'
-        ansible_role_vsphere_snapshot_action: create
+ 
+      tasks:
+        - name: Patching servers block.
+          block:
+            - name: Include the snapshot role to create a snapshot.
+              ansible.builtin.include_role:
+                name: ansible_role_vsphere_snapshot
+                vars:
+                  ansible_role_vsphere_snapshot_action: create
 
-      roles:
-         - role: ansible_role_vsphere_snapshot
+            - name: Include the software update role to patch the server.
+              ansible.builtin.include_role:
+                name: patch_servers_role
+
+            - name: Include the snapshot role to remove a snapshot.
+              ansible.builtin.include_role:
+                name: ansible_role_vsphere_snapshot
+                vars:
+                  ansible_role_vsphere_snapshot_action: remove
+
+          rescue:
+            - name: Include the snapshot role to revert a snapshot.
+              ansible.builtin.include_role:
+                name: ansible_role_vsphere_snapshot
+                vars:
+                  ansible_role_vsphere_snapshot_action: revert
+
+
+
 
 License
 -------
