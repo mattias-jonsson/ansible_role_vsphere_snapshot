@@ -65,8 +65,8 @@ Example Playbook
             - name: Include the snapshot role to create a snapshot.
               ansible.builtin.include_role:
                 name: ansible_role_vsphere_snapshot
-                vars:
-                  ansible_role_vsphere_snapshot_action: create
+              vars:
+                ansible_role_vsphere_snapshot_action: create
 
             - name: Include the software update role to patch the server.
               ansible.builtin.include_role:
@@ -75,15 +75,15 @@ Example Playbook
             - name: Include the snapshot role to remove a snapshot.
               ansible.builtin.include_role:
                 name: ansible_role_vsphere_snapshot
-                vars:
-                  ansible_role_vsphere_snapshot_action: remove
+              vars:
+                ansible_role_vsphere_snapshot_action: remove
 
           rescue:
             - name: Include the snapshot role to revert a snapshot.
               ansible.builtin.include_role:
                 name: ansible_role_vsphere_snapshot
-                vars:
-                  ansible_role_vsphere_snapshot_action: revert
+              vars:
+                ansible_role_vsphere_snapshot_action: revert
 
 
 
