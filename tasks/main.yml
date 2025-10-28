@@ -1,129 +1,38 @@
 ---
 
-- name: Assert that instance.Uuid is not empty
+- name: Include tasks to get information about the vCenter.
+  ansible.builtin.include_tasks:
+    file: "get_vcenter_info.yml"
+
+- name: Assert that vCenter version is supported
   ansible.builtin.assert:
     that:
-      - ansible_role_vsphere_snapshot_instance_uuid | length > 0
-    fail_msg: "instance.Uuid seems to be empty, I'm not a psychic."
-  when: ansible_role_vsphere_snapshot_action is defined
+      - ansible_role_vsphere_snapshot_vcenter_about_info.about_info.version is version('7', '>=')
+      - ansible_role_vsphere_snapshot_vcenter_about_info.about_info.version is version('9', '<')
+    msg: "This role only supports vSphere versions 7 and 8."
+    quiet: true
 
-- name: Block for create snapshot
-  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "create")
-  block:
-    - name: Check that not snapshot memory and quiesce guest file-system are set to true
-      ansible.builtin.assert:
-        that:
-          - not (ansible_role_vsphere_snapshot_snapshot_memory | bool and ansible_role_vsphere_snapshot_quiesce_guest_file_system | bool)
-        fail_msg: "ansible_role_vsphere_snapshot_snapshot memory and ansible_role_vsphere_snapshot_quiesce_guest_file_system are mutually exclusive."
+- name: Assert that instance UUID is not empty
+  ansible.builtin.assert:
+    that:
+      - vsphere_snapshot_vm_instance_uuid is defined
+      - vsphere_snapshot_vm_instance_uuid | default('', true) | length > 0
+    msg: "The instance UUID (vsphere_snapshot_vm_instance_uuid) is required but was not provided."
+    quiet: true
+  when: vsphere_snapshot_action is defined
 
-    - name: Check that prefix + suffix length is less than 44 chars
-      ansible.builtin.assert:
-        that:
-          - ansible_role_vsphere_snapshot_name_prefix | length + ansible_role_vsphere_snapshot_name_suffix | length < 42
-        fail_msg: "the length of ansible_role_vsphere_snapshot_name_prefix + ansible_role_vsphere_snapshot_name_suffix must be less than 44 characters"
+- name: Assert that snapshot name prefix and suffix combined length is within limits
+  ansible.builtin.assert:
+    that:
+      - ((vsphere_snapshot_name_prefix | default('', true)) | length) + ((vsphere_snapshot_name_suffix | default('', true)) | length) <= 44
+    msg: "The combined length of prefix and suffix must be less than or equal to 44 characters to fit within VMware's 80-character snapshot name limit."
+    quiet: true
 
-    - name: Create snapshot name
-      ansible.builtin.set_fact:
-        ansible_role_vsphere_snapshot_name: >
-          "{{ ansible_role_vsphere_snapshot_name_prefix + lookup('password', '/dev/null chars=ascii_letters,digits') | to_uuid + ansible_role_vsphere_snapshot_name_suffix }}"
+- name: Include tasks to check the virtual machine's capabilities before snapshot operations
+  ansible.builtin.include_tasks:
+    file: "check_capabilities.yml"
+  when: vsphere_snapshot_action | lower in ['create', 'remove', 'revert']
 
-    - name: Create a snapshot
-      community.vmware.vmware_guest_snapshot:
-        hostname: "{{ ansible_role_vsphere_snapshot_vcenter }}"
-        username: "{{ ansible_role_vsphere_snapshot_vcenter_username }}"
-        password: "{{ ansible_role_vsphere_snapshot_vcenter_password }}"
-        datacenter: "{{ ansible_role_vsphere_snapshot_datacenter }}"
-        use_instance_uuid: true
-        uuid: '{{ ansible_role_vsphere_snapshot_instance_uuid }}'
-        state: present
-        snapshot_name: '{{ ansible_role_vsphere_snapshot_name }}'
-        description: '{{ ansible_role_vsphere_snapshot_description | default(omit) }}'
-        validate_certs: "{{ ansible_role_vsphere_snapshot_validate_certs | default('yes') }}"
-        port: "{{ ansible_role_vsphere_snapshot_port | default('443') }}"
-        proxy_host: "{{ ansible_role_vsphere_snapshot_proxy_host | default(omit) }}"
-        proxy_port: "{{ ansible_role_vsphere_snapshot_proxy_port | default(omit) }}"
-        quiesce: "{{ ansible_role_vsphere_snapshot_quiesce_guest_file_system | default('false') }}"
-        memory_dump: "{{ ansible_role_vsphere_snapshot_snapshot_memory | default('true') }}"
-      register: ansible_role_vsphere_snapshot_create
-      delegate_to: localhost
-
-    - name: Set fact for ansible_role_vsphere_snapshot_created.
-      ansible.builtin.set_fact:
-        ansible_role_vsphere_snapshot_created: "{{ 'true' if ansible_role_vsphere_snapshot_create.changed | bool else 'false' }}"
-
-
-- name: Block for remove snapshot
-  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "remove")
-  block:
-    - name: Remove a named snapshot
-      community.vmware.vmware_guest_snapshot:
-        hostname: "{{ ansible_role_vsphere_snapshot_vcenter }}"
-        username: "{{ ansible_role_vsphere_snapshot_vcenter_username }}"
-        password: "{{ ansible_role_vsphere_snapshot_vcenter_password }}"
-        datacenter: "{{ ansible_role_vsphere_snapshot_datacenter }}"
-        use_instance_uuid: true
-        uuid: '{{ ansible_role_vsphere_snapshot_instance_uuid }}'
-        state: absent
-        snapshot_name: '{{ ansible_role_vsphere_snapshot_name }}'
-        validate_certs: "{{ ansible_role_vsphere_snapshot_validate_certs | default('yes') }}"
-        port: "{{ ansible_role_vsphere_snapshot_port | default('443') }}"
-        proxy_host: "{{ ansible_role_vsphere_snapshot_proxy_host | default(omit) }}"
-        proxy_port: "{{ ansible_role_vsphere_snapshot_proxy_port | default(omit) }}"
-      register: ansible_role_vsphere_snapshot_remove
-      delegate_to: localhost
-
-    - name: Set fact for ansible_role_vsphere_snapshot_removed.
-      ansible.builtin.set_fact:
-        ansible_role_vsphere_snapshot_removed: "{{ 'true' if ansible_role_vsphere_snapshot_remove.changed | bool else 'false' }}"
-
-
-- name: Block for revert snapshot
-  when: (ansible_role_vsphere_snapshot_action is defined and ansible_role_vsphere_snapshot_action | lower == "revert")
-  block:
-    - name: Revert to a named snapshot.
-      community.vmware.vmware_guest_snapshot:
-        hostname: "{{ ansible_role_vsphere_snapshot_vcenter }}"
-        username: "{{ ansible_role_vsphere_snapshot_vcenter_username }}"
-        password: "{{ ansible_role_vsphere_snapshot_vcenter_password }}"
-        datacenter: "{{ ansible_role_vsphere_snapshot_datacenter }}"
-        use_instance_uuid: true
-        uuid: '{{ ansible_role_vsphere_snapshot_instance_uuid }}'
-        state: revert
-        snapshot_name: '{{ ansible_role_vsphere_snapshot_name }}'
-        validate_certs: "{{ ansible_role_vsphere_snapshot_validate_certs | default('yes') }}"
-        port: "{{ ansible_role_vsphere_snapshot_port | default('443') }}"
-        proxy_host: "{{ ansible_role_vsphere_snapshot_proxy_host | default(omit) }}"
-        proxy_port: "{{ ansible_role_vsphere_snapshot_proxy_port | default(omit) }}"
-      register: ansible_role_vsphere_snapshot_revert
-      delegate_to: localhost
-
-    - name: Set fact for ansible_role_vsphere_snapshot_reverted.
-      ansible.builtin.set_fact:
-        ansible_role_vsphere_snapshot_reverted: "{{ 'true' if ansible_role_vsphere_snapshot_revert.changed | bool else 'false' }}"
-
-    - name: Sleep for 15 seconds after revert to let things settle for a bit.
-      ansible.builtin.wait_for:
-        timeout: 15
-      delegate_to: localhost
-
-    - name: Optionally remove a named snapshot after revert.
-      community.vmware.vmware_guest_snapshot:
-        hostname: "{{ ansible_role_vsphere_snapshot_vcenter }}"
-        username: "{{ ansible_role_vsphere_snapshot_vcenter_username }}"
-        password: "{{ ansible_role_vsphere_snapshot_vcenter_password }}"
-        datacenter: "{{ ansible_role_vsphere_snapshot_datacenter }}"
-        use_instance_uuid: true
-        uuid: '{{ ansible_role_vsphere_snapshot_instance_uuid }}'
-        state: absent
-        snapshot_name: '{{ ansible_role_vsphere_snapshot_name }}'
-        validate_certs: "{{ ansible_role_vsphere_snapshot_validate_certs | default('yes') }}"
-        port: "{{ ansible_role_vsphere_snapshot_port | default('443') }}"
-        proxy_host: "{{ ansible_role_vsphere_snapshot_proxy_host | default(omit) }}"
-        proxy_port: "{{ ansible_role_vsphere_snapshot_proxy_port | default(omit) }}"
-      delegate_to: localhost
-      register: ansible_role_vsphere_snapshot_remove
-      when: ansible_role_vsphere_snapshot_remove_after_revert | bool and ansible_role_vsphere_snapshot_revert.changed | bool
-
-    - name: Set fact for ansible_role_vsphere_snapshot_removed.
-      ansible.builtin.set_fact:
-        ansible_role_vsphere_snapshot_removed_after_revert: "{{ 'true' if ansible_role_vsphere_snapshot_remove.changed | bool else 'false' }}"
+- name: Include tasks to {{ vsphere_snapshot_action }} a VMware snapshot
+  ansible.builtin.include_tasks:
+    file: "{{ vsphere_snapshot_action | lower }}.yml"

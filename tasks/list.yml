@@ -1,0 +1,23 @@
+---
+
+- name: Reset snapshot list to ensure fresh data
+  ansible.builtin.set_fact:
+    vsphere_snapshot_snapshots: []
+
+- name: Gather snapshot information about the virtual machine in the given vCenter
+  community.vmware.vmware_guest_snapshot_info:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: '{{ vsphere_snapshot_vm_instance_uuid }}'
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+  delegate_to: localhost
+  register: ansible_role_vsphere_snapshot_info
+
+- name: Include tasks to add age information to snapshots
+  ansible.builtin.include_tasks:
+    file: "add_age.yml"
+  when:
+    - vsphere_snapshot_action | lower != "create"

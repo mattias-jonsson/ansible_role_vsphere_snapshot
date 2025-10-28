@@ -1,0 +1,10 @@
+---
+
+- name: Provide information about vCenter
+  community.vmware.vmware_about_info:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+  delegate_to: localhost
+  register: ansible_role_vsphere_snapshot_vcenter_about_info

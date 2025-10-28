@@ -1,0 +1,57 @@
+---
+
+- name: Include tasks to get virtual guest information from vSphere
+  ansible.builtin.include_tasks:
+    file: "get_guest_info.yml"
+
+- name: Fail if vSphere snapshots are not enabled for the virtual machine
+  ansible.builtin.fail:
+    msg: "Snapshots are disabled for the virtual machine in vSphere."
+  when: ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.config.flags.snapshotDisabled
+
+- name: Fail if vSphere snapshots are locked for the virtual machine
+  ansible.builtin.fail:
+    msg: "Snapshots are locked for the virtual machine in vSphere."
+  when:
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.config.flags.snapshotLocked
+    - vsphere_snapshot_action | lower in ['create', 'remove', 'revert']
+
+- name: Fail if snapshot operations are not supported
+  ansible.builtin.fail:
+    msg: "Snapshot operations are not supported."
+  when:
+    - not ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.capability.snapshotOperationsSupported
+    - vsphere_snapshot_action | lower in ['create', 'remove', 'revert']
+
+- name: Fail if revert snapshot operations are not supported
+  ansible.builtin.fail:
+    msg: "Revert to snapshot operations are not supported."
+  when:
+    - not ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.capability.revertToSnapshotSupported
+    - vsphere_snapshot_action | lower == 'revert'
+
+- name: Fail if quiesce guest file system is not supported
+  ansible.builtin.fail:
+    msg: "Quiesced snapshots are not supported for this virtual machine."
+  when:
+    - not ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.capability.quiescedSnapshotsSupported
+    - vsphere_snapshot_quiesce_guest_file_system
+
+- name: Fail if VMware tools is not operating properly
+  ansible.builtin.fail:
+    msg: >
+      Cannot create a quiesced snapshot because VMware Tools is not running
+      or not reporting a healthy status on the guest. Ensure VMware Tools
+      is installed, running, and reporting 'toolsOk' before retrying.
+  when:
+    - vsphere_snapshot_quiesce_guest_file_system | bool
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.runtime.powerState | lower == "poweredon"
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.toolsRunningStatus | lower != 'guesttoolsrunning'
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.toolsStatus | lower != 'toolsok'
+
+- name: Fail if snapshot of memory is not supported
+  ansible.builtin.fail:
+    msg: "Memory snapshot is not supported for this virtual machine."
+  when:
+    - not ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.capability.memorySnapshotsSupported
+    - vsphere_snapshot_snapshot_memory

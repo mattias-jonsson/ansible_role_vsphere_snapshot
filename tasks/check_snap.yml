@@ -1,0 +1,10 @@
+---
+
+- name: Include tasks to list snapshots
+  ansible.builtin.include_tasks:
+    file: list.yml
+
+- name: Fail if the snapshot does not exist
+  ansible.builtin.fail:
+    msg: "A snapshot named {{ vsphere_snapshot_check_snapname }} was not found associated with the virtual machine."
+  when: (vsphere_snapshot_snapshots | selectattr('name', 'equalto', vsphere_snapshot_check_snapname) | list | default([]) | length) < 1

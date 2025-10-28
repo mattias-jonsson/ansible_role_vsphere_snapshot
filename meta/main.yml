@@ -1,5 +1,5 @@
 ---
-
+allow_duplicates: true
 collections:
   - community.vmware
 
@@ -7,11 +7,14 @@ galaxy_info:
   author: Mattias Jonsson
   description: Ansible role that handles vSphere snapshot operations.
   min_ansible_version: 2.13.0
-  role_name: ansible_role_vsphere_snapshot
+  role_name: vsphere_snapshot
   license: MIT
   platforms:
     - name: vSphere
       versions:
-        - "6.0"
-        - "6.7"
         - "7.0"
+        - "8.0"
+  galaxy_tags:
+    - vmware
+    - vsphere
+    - snapshot

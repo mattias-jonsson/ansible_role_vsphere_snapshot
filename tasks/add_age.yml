@@ -1,0 +1,15 @@
+---
+
+- name: Loop through snapshot information and append age details to each snapshot
+  ansible.builtin.set_fact:
+    vsphere_snapshot_snapshots: "{{ (vsphere_snapshot_snapshots | default([])) + [item | combine({'age_days': snapshot_age_days, 'age_hours': snapshot_age_hours, 'age_minutes': snapshot_age_minutes, 'age_seconds': snapshot_age_seconds})] }}"
+  loop: "{{ ansible_role_vsphere_snapshot_info.guest_snapshots.snapshots }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    snapshot_epoch: "{{ (item.creation_time | to_datetime('%Y-%m-%dT%H:%M:%S.%f%z')).timestamp() | int }}"
+    current_epoch: "{{ now().timestamp() | int }}"
+    snapshot_age_seconds: "{{ current_epoch - snapshot_epoch }}"
+    snapshot_age_days: "{{ (snapshot_age_seconds / 86400) | round(1) }}"
+    snapshot_age_hours: "{{ (snapshot_age_seconds / 3600) | round(1) }}"
+    snapshot_age_minutes: "{{ (snapshot_age_seconds / 60) | round(1) }}"

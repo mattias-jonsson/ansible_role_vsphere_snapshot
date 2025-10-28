@@ -1,0 +1,29 @@
+---
+
+- name: Gather some info from VMware vSphere about the virtual machine
+  community.vmware.vmware_guest_info:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    schema: "vsphere"
+    use_instance_uuid: true
+    uuid: "{{ vsphere_snapshot_vm_instance_uuid }}"
+    properties:
+      - capability.diskOnlySnapshotOnSuspendedVMSupported
+      - capability.memorySnapshotsSupported
+      - capability.poweredOffSnapshotsSupported
+      - capability.quiescedSnapshotsSupported
+      - capability.revertToSnapshotSupported
+      - capability.snapshotOperationsSupported
+      - config.flags.snapshotDisabled
+      - config.flags.snapshotLocked
+      - guest.guestKernelCrashed
+      - guest.guestOperationsReady
+      - guest.toolsRunningStatus
+      - guest.toolsStatus
+      - guest.toolsVersion
+      - overallStatus
+      - runtime.powerState
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+  register: ansible_role_vsphere_snapshot_info_vmware_guest_info

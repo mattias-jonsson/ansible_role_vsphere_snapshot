@@ -1,0 +1,82 @@
+---
+
+- name: Fail if the virtual machine is not operations ready and override is not specified
+  ansible.builtin.fail:
+    msg: |
+      The virtual machine is not operations ready (guestOperationsReady is {{ ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.guestOperationsReady }}).
+      Please ensure that the guest tools service is installed and running, or override with `vsphere_snapshot_override_op_ready` set to true.
+  when:
+    - not ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.guestOperationsReady
+    - not vsphere_snapshot_override_op_ready | default(false)
+
+- name: Fail if the virtual machine kernel has crashed and override is not specified
+  ansible.builtin.fail:
+    msg: |
+      The virtual machine has crashed (guestKernelCrashed is {{ ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.guestKernelCrashed }}).
+      Please check the virtual machine's status, resolve the issue, or override with `vsphere_snapshot_override_kern_crash` set to true to force the snapshot.
+  when:
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.guest.guestKernelCrashed
+    - not vsphere_snapshot_override_kern_crash | default(false)
+
+- name: Include tasks to list snapshots
+  ansible.builtin.include_tasks:
+    file: list.yml
+
+- name: Fail if snapshot limit is exceeded
+  ansible.builtin.fail:
+    msg: "Snapshot limit exceeded! Maximum allowed: 31, but found {{ ansible_role_vsphere_snapshot_info.guest_snapshots.snapshots | length }} snapshots."
+  when: ansible_role_vsphere_snapshot_info.guest_snapshots.snapshots | length >= 31
+
+- name: Fail if snapshot memory and quiesce guest file system are both enabled
+  ansible.builtin.fail:
+    msg: "The options vsphere_snapshot_snapshot_memory and vsphere_snapshot_quiesce_guest_file_system are mutually exclusive and cannot both be enabled."
+  when: vsphere_snapshot_snapshot_memory | bool and vsphere_snapshot_quiesce_guest_file_system | bool
+
+- name: Fail if snapshot name prefix and suffix combined length exceeds limit
+  ansible.builtin.fail:
+    msg: "The combined length of vsphere_snapshot_name_prefix and vsphere_snapshot_name_suffix must be less than 44 characters."
+  when: vsphere_snapshot_name_prefix | default('') | length + vsphere_snapshot_name_suffix | default('') | length >= 44
+
+- name: Generate unique snapshot name with prefix, suffix, and UUID
+  ansible.builtin.set_fact:
+    vsphere_snapshot_generated_name: >-
+      {{
+        (
+          (vsphere_snapshot_name_prefix | default('')) +
+          (lookup('password', '/dev/null', chars='ascii_letters,digits') | to_uuid) +
+          (vsphere_snapshot_name_suffix | default(''))
+        )
+        | trim('"')
+      }}
+
+- name: Create a snapshot
+  community.vmware.vmware_guest_snapshot:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: '{{ vsphere_snapshot_vm_instance_uuid }}'
+    state: present
+    snapshot_name: '{{ vsphere_snapshot_generated_name }}'
+    description: '{{ vsphere_snapshot_description | default(omit) }}'
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+    quiesce: "{{ vsphere_snapshot_quiesce_guest_file_system | default(false) }}"
+    memory_dump: "{{ vsphere_snapshot_snapshot_memory | default(true) }}"
+  register: vsphere_snapshot_create
+  delegate_to: localhost
+
+- name: Set fact for vsphere_snapshot_created
+  ansible.builtin.set_fact:
+    vsphere_snapshot_created: "{{ vsphere_snapshot_create.changed | bool }}"
+
+- name: Print the name of the created snapshot
+  ansible.builtin.debug:
+    msg: >-
+      A snapshot with the following name was created:
+      {{ vsphere_snapshot_create.snapshot_results.current_snapshot.name |
+         replace('\\', '') |
+         replace('"', '') }}

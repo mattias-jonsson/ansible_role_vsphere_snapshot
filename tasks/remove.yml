@@ -1,0 +1,35 @@
+---
+
+- name: Fail if vsphere_snapshot_name is not populated
+  ansible.builtin.fail:
+    msg: "A name for the snapshot to remove was not supplied."
+  when:
+    - vsphere_snapshot_generated_name | default('') | length < 1
+    - vsphere_snapshot_name | default('') | length < 1
+
+- name: Include tasks to check if the snapshot exists
+  ansible.builtin.include_tasks:
+    file: "check_snap.yml"
+  vars:
+    vsphere_snapshot_check_snapname: '{{ vsphere_snapshot_name | default(vsphere_snapshot_generated_name) }}'
+
+- name: Remove the named snapshot
+  community.vmware.vmware_guest_snapshot:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: '{{ vsphere_snapshot_vm_instance_uuid }}'
+    state: absent
+    snapshot_name: '{{ vsphere_snapshot_name | default(vsphere_snapshot_generated_name) }}'
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+  register: vsphere_snapshot_remove
+  delegate_to: localhost
+
+- name: Set fact for vsphere_snapshot_removed
+  ansible.builtin.set_fact:
+    vsphere_snapshot_removed: "{{ vsphere_snapshot_remove.changed | bool }}"

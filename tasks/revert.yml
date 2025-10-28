@@ -1,0 +1,94 @@
+---
+
+- name: Fail if vsphere_snapshot_name is not populated
+  ansible.builtin.fail:
+    msg: "A name for the snapshot to revert was not supplied."
+  when: vsphere_snapshot_name | default('') | length < 1
+
+- name: Include tasks to check if the snapshot exists
+  ansible.builtin.include_tasks:
+    file: "check_snap.yml"
+  vars:
+    vsphere_snapshot_check_snapname: '{{ vsphere_snapshot_name | default(vsphere_snapshot_generated_name) }}'
+
+- name: Revert to a named snapshot
+  community.vmware.vmware_guest_snapshot:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: '{{ vsphere_snapshot_vm_instance_uuid }}'
+    state: revert
+    snapshot_name: '{{ vsphere_snapshot_name | default(vsphere_snapshot_generated_name) }}'
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default('yes') }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+  register: vsphere_snapshot_revert
+  delegate_to: localhost
+
+- name: Set fact for vsphere_snapshot_reverted
+  ansible.builtin.set_fact:
+    vsphere_snapshot_reverted: "{{ vsphere_snapshot_revert.changed | bool }}"
+
+- name: Wait 15 seconds after revert to allow system stabilization
+  ansible.builtin.wait_for:
+    timeout: 15
+  delegate_to: localhost
+
+- name: Optionally remove snapshot after revert
+  community.vmware.vmware_guest_snapshot:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: '{{ vsphere_snapshot_vm_instance_uuid }}'
+    state: absent
+    snapshot_name: '{{ vsphere_snapshot_name | default(vsphere_snapshot_generated_name) }}'
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default(true) }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+  delegate_to: localhost
+  register: vsphere_snapshot_remove
+  when: vsphere_snapshot_remove_after_revert | bool and vsphere_snapshot_revert.changed | bool
+
+- name: Set fact for vsphere_snapshot_removed
+  ansible.builtin.set_fact:
+    vsphere_snapshot_removed_after_revert: "{{ vsphere_snapshot_remove.changed | default(false) | bool }}"
+
+- name: Restore VM to original power state
+  community.vmware.vmware_guest:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    datacenter: "{{ vsphere_snapshot_datacenter }}"
+    use_instance_uuid: true
+    uuid: "{{ vsphere_snapshot_vm_instance_uuid }}"
+    state: "{{ 'poweredon' if ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.runtime.powerState | lower == 'poweredon' else 'poweredoff' }}"
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default('yes') }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+  delegate_to: localhost
+  register: vsphere_snapshot_power_restore
+  when: vsphere_snapshot_revert.changed | bool
+
+- name: Wait for VMware Tools to become available after power on
+  community.vmware.vmware_guest_tools_wait:
+    hostname: "{{ vsphere_snapshot_vcenter }}"
+    username: "{{ vsphere_snapshot_vcenter_username }}"
+    password: "{{ vsphere_snapshot_vcenter_password }}"
+    use_instance_uuid: true
+    uuid: "{{ vsphere_snapshot_vm_instance_uuid }}"
+    timeout: "{{ vsphere_snapshot_tools_wait_timeout | default(600) }}"
+    validate_certs: "{{ vsphere_snapshot_validate_certs | default('yes') }}"
+    port: "{{ vsphere_snapshot_port | default('443') }}"
+    proxy_host: "{{ vsphere_snapshot_proxy_host | default(omit) }}"
+    proxy_port: "{{ vsphere_snapshot_proxy_port | default(omit) }}"
+  delegate_to: localhost
+  when:
+    - vsphere_snapshot_revert.changed | bool
+    - ansible_role_vsphere_snapshot_info_vmware_guest_info.instance.runtime.powerState | lower == 'poweredon'

@@ -1,22 +1,32 @@
 ---
 
-_disable_ansible_role_vsphere_snapshot_proxy_host: ''
-_disable_ansible_role_vsphere_snapshot_proxy_port: ''
-ansible_role_vsphere_snapshot_datacenter: ''
-ansible_role_vsphere_snapshot_description: ''
-ansible_role_vsphere_snapshot_expire:
-  seconds:
-  minutes:
-  days:
-  years:
-ansible_role_vsphere_snapshot_instance_uuid: ''
-ansible_role_vsphere_snapshot_name_prefix: ''
-ansible_role_vsphere_snapshot_name_suffix: ''
-ansible_role_vsphere_snapshot_port: ''
-ansible_role_vsphere_snapshot_quiesce_guest_file_system: 'false'
-ansible_role_vsphere_snapshot_remove_after_revert: 'true'
-ansible_role_vsphere_snapshot_snapshot_memory: 'true'
-ansible_role_vsphere_snapshot_validate_certs: ''
-ansible_role_vsphere_snapshot_vcenter_password: ''
-ansible_role_vsphere_snapshot_vcenter_username: ''
-ansible_role_vsphere_snapshot_vcenter: ''
+# vCenter connection settings
+vsphere_snapshot_vcenter:
+vsphere_snapshot_vcenter_username:
+vsphere_snapshot_vcenter_password:
+vsphere_snapshot_port: 443
+vsphere_snapshot_validate_certs: true
+vsphere_snapshot_datacenter:
+
+# Proxy settings (optional)
+vsphere_snapshot_proxy_host:
+vsphere_snapshot_proxy_port:
+
+# Virtual machine identification
+vsphere_snapshot_vm_instance_uuid:
+
+# Snapshot naming and description
+vsphere_snapshot_name_prefix:
+vsphere_snapshot_name_suffix:
+vsphere_snapshot_description:
+
+# Snapshot behavior options
+vsphere_snapshot_quiesce_guest_file_system: false
+vsphere_snapshot_remove_after_revert: true
+vsphere_snapshot_snapshot_memory: true
+vsphere_snapshot_snapshot_poweredoff: false
+vsphere_snapshot_tools_wait_timeout: 600
+
+# Override safety checks (use with caution)
+vsphere_snapshot_override_op_ready: false
+vsphere_snapshot_override_kern_crash: false
